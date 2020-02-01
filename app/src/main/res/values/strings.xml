@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Countify</string>
+    <string name="title_activity_login">LoginActivity</string>
+    <string name="textview_description">Timer which creates and plays a playlist to the specified time</string>
+    <string name="textview_header">countify</string>
+    <string name="title_activity_main">MainActivity</string>
+</resources>
