@@ -3,6 +3,7 @@ package com.example.countify;
 public class Song {
     private String id;
     private String name;
+    private int duration_ms;
 
     public Song(String id, String name) {
         this.name = name;
@@ -23,6 +24,9 @@ public class Song {
 
     public void setName(String name) {
         this.name = name;
+    }
+    public int getDuration_ms() {
+        return duration_ms;
     }
 
 }

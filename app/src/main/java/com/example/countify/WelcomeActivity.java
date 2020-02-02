@@ -19,7 +19,9 @@ import com.spotify.sdk.android.authentication.AuthenticationRequest;
 import com.spotify.sdk.android.authentication.AuthenticationResponse;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -30,7 +32,7 @@ public class WelcomeActivity extends AppCompatActivity {
     private static final String CLIENT_ID = "ca0af4041b944e459c991c15b9a93d9c";
     private static final String REDIRECT_URI = "com.example.countify://callback";
     private static final int REQUEST_CODE = 1337;
-    private static final String SCOPES = "user-read-recently-played,user-library-modify,user-read-email,user-read-private";
+    private static final String SCOPES = "user-read-recently-played,user-library-read,user-read-email,user-read-private";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
