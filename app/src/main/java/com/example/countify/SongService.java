@@ -68,6 +68,7 @@ public class SongService extends Service<List<Song>> {
                     JSONObject track = itemsArray.getJSONObject(i)
                             .getJSONObject("track");
                     Song song = new Gson().fromJson(track.toString(), Song.class);
+                    song.parseSong();
                     songs.add(song);
                 }
             }
@@ -79,6 +80,28 @@ public class SongService extends Service<List<Song>> {
     }
     public void findClosestSongs(VolleyCallBack<Set<Song>> callback, int time,List<Song> songs) {
         sum_up(callback,songs, time);
+    }
+    //Returns replacement song
+    //Enter real time in the future
+    //Pass in playlist BEFORE removal
+    public Song replaceSong(Song songToBeReplaced, List<Song> currentPlaylist, List<Song> allSongs) {
+        HashSet<Song> playlistSet = new HashSet<>(currentPlaylist);
+        int playlistTime = 0;
+        for (Song song: playlistSet) {
+            playlistTime += song.getDuration_ms();
+        }
+        int timeAfterRemoval = playlistTime - songToBeReplaced.getDuration_ms();
+        ArrayList<Song> songArray = new ArrayList<>(allSongs);
+        while (songArray.size() > 0) {
+            Song n = songArray.get(new Random().nextInt(songArray.size()));
+            songArray.remove(n);
+            if (!playlistSet.contains(n)
+                    &&  playlistTime <= timeAfterRemoval + n.getDuration_ms() + 5000
+                    && playlistTime >= timeAfterRemoval + n.getDuration_ms() - 5000) {
+                return n;
+            }
+        }
+        return null;
     }
     void sum_up_recursive(VolleyCallBack<Set<Song>> callback,Set<Song> songSet, int target, Set<Song> partial) {
         int s = 0;
@@ -121,6 +144,7 @@ public class SongService extends Service<List<Song>> {
     public void get(VolleyCallBack<List<Song>> callback) {
         recurse(callback, new ArrayList<Song>(), 0);
     }
+
 
     @Override
     String getTag() {

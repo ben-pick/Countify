@@ -1,13 +1,18 @@
 package com.example.countify;
 
+import android.content.Context;
 import android.os.Bundle;
+import android.os.Parcelable;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -17,52 +22,81 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    private List<Song> songList = new ArrayList<>();
-    private List<Song> playlistRef = new ArrayList<>();
+    private static final String TAG = Shared.COUNTIFY + "MainActivity";
+    private Parcelable recyclerViewState;
+    private RecyclerView recyclerView;
+    private List<Song> allSongs = new ArrayList<>();
+    private List<Song> playlist = new ArrayList<>();
+    private Context context;
+    private SongService songService;
+    private Toolbar toolbar;
+    private void initRecyclerView() {
+        recyclerView = findViewById(R.id.playlist_recyclerview);
+        recyclerView.setVisibility(View.VISIBLE);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        RefreshCallback rCallback = new RefreshCallback() {
+            @Override
+            public void onBefore() {
+                recyclerViewState = recyclerView.getLayoutManager().onSaveInstanceState();
+            }
+
+            @Override
+            public void onAfter() {
+                if (recyclerViewState != null) {
+                    recyclerView.getLayoutManager().onRestoreInstanceState(recyclerViewState);
+                    recyclerViewState = null;
+                }
+            }
+        };
+
+        PlaylistAdapter adapter = new PlaylistAdapter(this, allSongs, playlist, rCallback);
+        recyclerView.setAdapter(adapter);
+
+        ItemTouchHelper.SimpleCallback swipeRemoveCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                Song toRemove = playlist.get(viewHolder.getAdapterPosition()-1);
+                Song replacement = songService.replaceSong(toRemove, playlist, allSongs);
+                if (replacement != null) {
+                Log.d(TAG, "Attempting to replace song " + toRemove.getName() + " " +
+                        toRemove.getDuration_ms() + " with " + replacement.getName() + " " + replacement.getDuration_ms() );
+                    playlist.set(viewHolder.getAdapterPosition() - 1, replacement);
+                    adapter.notifyItemChanged(viewHolder.getAdapterPosition());
+                }
+                else {
+                    adapter.notifyItemChanged(viewHolder.getAdapterPosition());
+                    Snackbar.make(toolbar, "Failed to find replacement song", Snackbar.LENGTH_SHORT).show();
+                    Log.d(TAG, "Failed to find replacement song");
+                }
+            }
+        };
+        new ItemTouchHelper(swipeRemoveCallback).attachToRecyclerView(recyclerView);
+
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Toolbar toolbar = findViewById(R.id.toolbar);
+        toolbar = findViewById(R.id.toolbar);
         Snackbar.make(toolbar, "Successfully logged in!", Snackbar.LENGTH_LONG).show();
-
-        SongService songService = new SongService(this);
+        context = this;
+        songService = new SongService(this);
 
         songService.get(songs -> {
+            allSongs.addAll(songs);
             ProgressBar progressBar = findViewById(R.id.getallsongs_progressbar);
             progressBar.setVisibility(View.GONE);
             Snackbar.make(toolbar, "Successfully grabbed all saved songs!", Snackbar.LENGTH_LONG).show();
-            songList = songs;
 
-            EditText timeEntry = findViewById(R.id.time_edittext);
-            timeEntry.setVisibility(View.VISIBLE);
             setSupportActionBar(toolbar);
-
-            RecyclerView recyclerView = findViewById(R.id.playlist_recyclerview);
-            recyclerView.setVisibility(View.VISIBLE);
-            recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
-            PlaylistAdapter adapter = new PlaylistAdapter(this, playlistRef);
-            recyclerView.setAdapter(adapter);
-
-            Button generateBtn = findViewById(R.id.generate_btn);
-            generateBtn.setVisibility(View.VISIBLE);
-
-            generateBtn.setOnClickListener(v -> {
-                String timeString = timeEntry.getText().toString();
-                if (timeString.matches("-?\\d+")) {
-                    try {
-                        songService.findClosestSongs(playlist -> {
-                            adapter.updateData(new ArrayList<>(playlist));
-                        }, Integer.parseInt(timeEntry.getText().toString()) * 60 * 1000, songList);
-                    } catch (NumberFormatException e) {
-                        Snackbar.make(toolbar, "Please enter a valid time in minutes", Snackbar.LENGTH_LONG).show();
-                    }
-                } else {
-                    Snackbar.make(toolbar, "Please enter a valid time in minutes", Snackbar.LENGTH_LONG).show();
-                }
-            });
+            initRecyclerView();
         });
+
     }
 }
