@@ -1,7 +1,6 @@
 package com.example.countify;
 
 import android.content.Context;
-import android.os.Parcelable;
 import android.text.Editable;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -11,14 +10,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toolbar;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.snackbar.Snackbar;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
@@ -31,15 +27,15 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     private List<Song> allSongs;
     private LayoutInflater mInflater;
     private Context context;
-    private RefreshCallback refreshStateCallback;
+    private SnackbarCallback snackbarCallback;
     private Editable timeBefore;
 
-    PlaylistAdapter(Context context, List<Song> allsongs, List<Song> playlist, RefreshCallback refreshStateCallback) {
+    PlaylistAdapter(Context context, List<Song> allsongs, List<Song> playlist, SnackbarCallback snackbarCallback) {
         this.mInflater = LayoutInflater.from(context);
         this.allSongs = allsongs;
         this.playlist = playlist;
         this.context = context;
-        this.refreshStateCallback = refreshStateCallback;
+        this.snackbarCallback = snackbarCallback;
     }
 
     private final int GENERATE = 0;
@@ -86,14 +82,23 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     String timeString = generateViewHolder.time.getText().toString();
                     if (timeString.matches("-?\\d+")) {
                         try {
+                            int timeInMs = Math.multiplyExact(Integer.parseInt(timeString), 60 * 1000);
                             songService.findClosestSongs(playlist -> {
-                                updateData(new ArrayList<>(playlist));
-                            }, Integer.parseInt(timeString) * 60 * 1000, allSongs);
-                        } catch (NumberFormatException e) {
-//                            Snackbar.make(toolbar, "Please enter a valid time in minutes", Snackbar.LENGTH_LONG).show();
+                                Log.d(TAG, "got callback");
+                                if (playlist == null) {
+                                    Log.d(TAG, "playlist null");
+                                    snackbarCallback.showSnackbar("You don't have enough songs for that time. Please enter a smaller number.");
+                                }
+                                else {
+                                    Log.d(TAG, "playlist not null");
+                                    updateData(new ArrayList<>(playlist));
+                                }
+                            }, timeInMs, allSongs);
+                        } catch (NumberFormatException | ArithmeticException e) {
+                            snackbarCallback.showSnackbar("Please enter a valid time in minutes.");
                         }
                     } else {
-//                        Snackbar.make(toolbar, "Please enter a valid time in minutes", Snackbar.LENGTH_LONG).show();
+                        snackbarCallback.showSnackbar("Please enter a valid time in minutes.");
                     }
                 });
 
@@ -151,13 +156,14 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         }
     }
     public void updateData(List<Song> data) {
-        refreshStateCallback.onBefore();
-        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffCallback(data, playlist));
+//        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffCallback(data, playlist));
+        int size = playlist.size();
         playlist.clear();
+        notifyItemRangeRemoved(1,size);
         playlist.addAll(data);
-        diffResult.dispatchUpdatesTo(this);
-        refreshStateCallback.onAfter();
+        notifyItemRangeInserted(1,data.size());
 
+//        diffResult.dispatchUpdatesTo(this);
     }
 }
 class DiffCallback extends DiffUtil.Callback{
@@ -187,7 +193,7 @@ class DiffCallback extends DiffUtil.Callback{
 
     @Override
     public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
-        return oldPlaylist.get(oldItemPosition).equals(newPlaylist.get(newItemPosition));
+        return oldPlaylist.get(oldItemPosition).getName().equals(newPlaylist.get(newItemPosition).getName());
     }
 
     @Nullable

@@ -34,22 +34,8 @@ public class MainActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.playlist_recyclerview);
         recyclerView.setVisibility(View.VISIBLE);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        RefreshCallback rCallback = new RefreshCallback() {
-            @Override
-            public void onBefore() {
-                recyclerViewState = recyclerView.getLayoutManager().onSaveInstanceState();
-            }
-
-            @Override
-            public void onAfter() {
-                if (recyclerViewState != null) {
-                    recyclerView.getLayoutManager().onRestoreInstanceState(recyclerViewState);
-                    recyclerViewState = null;
-                }
-            }
-        };
-
-        PlaylistAdapter adapter = new PlaylistAdapter(this, allSongs, playlist, rCallback);
+        SnackbarCallback snackbarCallback = message -> Snackbar.make(toolbar, message, Snackbar.LENGTH_LONG).show();
+        PlaylistAdapter adapter = new PlaylistAdapter(this, allSongs, playlist, snackbarCallback);
         recyclerView.setAdapter(adapter);
 
         ItemTouchHelper.SimpleCallback swipeRemoveCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {

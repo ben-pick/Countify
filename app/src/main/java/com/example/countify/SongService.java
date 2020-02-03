@@ -29,6 +29,20 @@ public class SongService extends Service<List<Song>> {
         super(context);
     }
 
+    private Boolean isValid(List<Song> songList, int time) {
+        int totalTime = songList.stream()
+                .map(Song::getDuration_ms)
+                .reduce(0, Integer::sum);
+        Log.d(TAG,"totalTime "+totalTime);
+        Log.d(TAG,"enteredTime "+time);
+
+        if (time > totalTime) {
+            return false;
+        }
+        else {
+            return true;
+        }
+    }
     //We need to recurse until we get a request with less than 50 songs
     private void recurse(VolleyCallBack<List<Song>> callback, ArrayList<Song> totalSongs, int offset) {
         String token = decryptToken();
@@ -109,11 +123,6 @@ public class SongService extends Service<List<Song>> {
         //5 second leighway
         //Only generate list of 10 songs
         if (s <= target + 5000 && s >= target - 5000) {
-            Log.d("SongService", "sum(" + Arrays.toString(partial.toArray()) + ")=" + target);
-//            playlists.add(partial);
-//            if (playlists.size() >= 1) {
-//                Set<Song> playlist = playlists.get(new Random().nextInt(playlists.size()));
-//            }
             playlist = new HashSet<>(partial);
             callback.onSuccess(partial);
         }
@@ -123,12 +132,11 @@ public class SongService extends Service<List<Song>> {
             if (playlist.size() >=1) {
                 return;
             }
-            Set<Song> remaining = new HashSet<>();
             Song[] songArray = songSet.toArray(new Song[0]);
             Song n = songArray[new Random().nextInt(songSet.size())];
 
             songSet.remove(n);
-            remaining.addAll(songSet);
+            Set<Song> remaining = new HashSet<>(songSet);
 
             Set<Song> partial_rec = new HashSet<Song>(partial);
             partial_rec.add(n);
@@ -137,7 +145,12 @@ public class SongService extends Service<List<Song>> {
 
     }
     void sum_up(VolleyCallBack<Set<Song>> callback,List<Song> numbers, int target) {
-        sum_up_recursive(callback, new HashSet<>(numbers),target,new HashSet<>());
+        if (isValid(numbers, target)) {
+            sum_up_recursive(callback, new HashSet<>(numbers), target, new HashSet<>());
+        }
+        else {
+            callback.onSuccess(null);
+        }
         playlist.clear();
     }
     @Override
