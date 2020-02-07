@@ -40,12 +40,15 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     private final int GENERATE = 0;
     private final int SONG = 1;
+    private final int CONFIRM = 2;
     // inflates the row layout from xml when needed
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         switch (viewType) {
             case GENERATE :
                 return new GenerateViewHolder(mInflater.inflate(R.layout.generate_actions, parent, false));
+            case CONFIRM :
+                return new ConfirmViewHolder(mInflater.inflate(R.layout.confirm_actions, parent, false));
             case SONG :
                 return new SongViewHolder(mInflater.inflate(R.layout.container_song, parent, false));
             default: return new SongViewHolder(mInflater.inflate(R.layout.container_song, parent, false));
@@ -55,11 +58,20 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     //Only first position needs to be the generate actions, otherwise, display the songs
     @Override
     public int getItemViewType(int position) {
-        if (position == 0) {
-            return GENERATE;
-        }
-        else {
-            return SONG;
+        if (playlist.size() > 0) {
+            if (position == 0) {
+                return GENERATE;
+            } else if (position == playlist.size() + 1) {
+                return CONFIRM;
+            } else {
+                return SONG;
+            }
+        } else {
+            if (position == 0) {
+                return GENERATE;
+            } else {
+                return SONG;
+            }
         }
     }
 
@@ -103,6 +115,15 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 });
 
         break;
+            case CONFIRM:
+                ConfirmViewHolder confirmViewHolder = (ConfirmViewHolder) holder;
+                PlaylistService playlistService = new PlaylistService(context);
+                confirmViewHolder.confirmBtn.setOnClickListener(v -> {
+                    playlistService.generatePlaylist(playlist -> {
+                        Log.d(TAG, playlist.getHref());
+                    }, "Countify test", "Description", false, new ArrayList<>(playlist));
+                });
+                break;
             case SONG:
                 SongViewHolder songViewHolder = (SongViewHolder) holder;
                 Song song = playlist.get(position-1);
@@ -119,7 +140,28 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     // total number of rows
     @Override
     public int getItemCount() {
-        return playlist.size() + 1;
+//        //Dont display confirm button
+        if (playlist.size() == 0) {
+            return playlist.size() + 1;
+        }
+        //Display the confirm button
+        else {
+            return playlist.size() + 2;
+        }
+//        return playlist.size() + 2;
+    }
+    public class ConfirmViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+        Button confirmBtn;
+
+        public ConfirmViewHolder(View itemView) {
+            super(itemView);
+            confirmBtn = itemView.findViewById(R.id.confirm_btn);
+        }
+
+        @Override
+        public void onClick(View v) {
+
+        }
     }
 
     public class GenerateViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -159,9 +201,11 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 //        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffCallback(data, playlist));
         int size = playlist.size();
         playlist.clear();
-        notifyItemRangeRemoved(1,size);
+//        notifyDataSetChanged();
+        notifyItemRangeRemoved(1,size+1);
         playlist.addAll(data);
-        notifyItemRangeInserted(1,data.size());
+//        notifyDataSetChanged();
+        notifyItemRangeInserted(1,data.size()+1);
 
 //        diffResult.dispatchUpdatesTo(this);
     }

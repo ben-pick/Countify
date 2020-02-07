@@ -32,12 +32,13 @@ public class WelcomeActivity extends AppCompatActivity {
     private static final String CLIENT_ID = "ca0af4041b944e459c991c15b9a93d9c";
     private static final String REDIRECT_URI = "com.example.countify://callback";
     private static final int REQUEST_CODE = 1337;
-    private static final String SCOPES = "user-read-recently-played,user-library-read,user-read-email,user-read-private";
+    private static final String SCOPES = "user-read-recently-played,user-library-read,user-read-email,user-read-private,playlist-modify-private,playlist-modify-public";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_welcome);
+        getSupportActionBar().hide();
         Button loginButton = findViewById(R.id.spotify_login_btn);
         loginButton.setOnClickListener(v -> authenticateSpotify());
     }
@@ -79,7 +80,7 @@ public class WelcomeActivity extends AppCompatActivity {
     private void saveUserInfo() {
         UserService userService = new UserService(this);
         userService.get(user -> {
-            Shared.saveInPersistenceNow(this, "userId", user.id);
+            Shared.saveInPersistenceNow(this, Shared.USERID, user.id);
             startActivity(new Intent(this, MainActivity.class));
         });
     }

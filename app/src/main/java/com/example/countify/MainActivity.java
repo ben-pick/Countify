@@ -5,8 +5,6 @@ import android.os.Bundle;
 import android.os.Parcelable;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ProgressBar;
 
 import androidx.annotation.NonNull;
@@ -38,7 +36,17 @@ public class MainActivity extends AppCompatActivity {
         PlaylistAdapter adapter = new PlaylistAdapter(this, allSongs, playlist, snackbarCallback);
         recyclerView.setAdapter(adapter);
 
-        ItemTouchHelper.SimpleCallback swipeRemoveCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {
+        ItemTouchHelper.SimpleCallback swipeRemoveCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+            @Override
+            public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                if (viewHolder instanceof PlaylistAdapter.SongViewHolder) {
+                    return makeMovementFlags(ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT);
+                }
+                else {
+                    return ItemTouchHelper.ACTION_STATE_IDLE;
+                }
+            }
+
             @Override
             public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
                 return false;
@@ -70,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         toolbar = findViewById(R.id.toolbar);
+        toolbar.setTitle("Playlist");
         Snackbar.make(toolbar, "Successfully logged in!", Snackbar.LENGTH_LONG).show();
         context = this;
         songService = new SongService(this);

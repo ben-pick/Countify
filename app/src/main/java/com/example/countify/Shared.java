@@ -4,7 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 
 public class Shared {
-    static final String USERDATA = "user_info";
+    static final String USERID = "user_id";
     static final String TOKEN = "token";
     static final String TOKENIV = "token_iv";
     static final String SONGDATA = "song_data";

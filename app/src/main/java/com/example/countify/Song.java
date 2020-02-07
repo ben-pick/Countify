@@ -11,6 +11,7 @@ public class Song {
     private int duration_ms;
     private List<Artist> artists;
     private Album album;
+    private String uri;
 
     //Instantiate early for performance
     private String concatenatedArtists;
@@ -64,6 +65,9 @@ public class Song {
         return artists;
     }
 
+    public String getUri() {
+        return uri;
+    }
 
     public String getImageUrl() {
         return imageUrl;
