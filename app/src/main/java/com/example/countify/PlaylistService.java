@@ -15,6 +15,7 @@ import org.json.JSONObject;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -38,7 +39,7 @@ public class PlaylistService extends Service<Playlist> {
         return ENDPOINT_PLAYLISTS + playlistId + "/tracks";
     }
 
-    private void accumulateTracks(VolleyCallBack<Void> callback, Playlist playlist, int position, ArrayList<Song> songs) {
+    private void accumulateTracks(VolleyCallBack<Void> callback, Playlist playlist, int position, List<Song> songs) {
         Log.d(TAG, "Size of playlist " + songs.size());
         if (position >= songs.size()-1) {
             callback.onSuccess(null);
@@ -112,6 +113,14 @@ public class PlaylistService extends Service<Playlist> {
         }
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, getCreateUrl(userId), body, response -> {
+            Log.d(TAG, response.toString());
+
+            Playlist playlist = new Gson().fromJson(response.toString(), Playlist.class);
+            try {
+                playlist.setExternal_url(response.getJSONObject("external_urls").getString("spotify"));
+            } catch (JSONException e) {
+                Log.d(TAG, e.getMessage());
+            }
             callback.onSuccess(new Gson().fromJson(response.toString(), Playlist.class));
         }, error -> Log.d(TAG, "" +error.networkResponse.statusCode)) {
             @Override
@@ -142,7 +151,7 @@ public class PlaylistService extends Service<Playlist> {
         VolleySingleton.sharedInstance(context).getRequestQueue().add(jsonObjectRequest);
 
     }
-    public void generatePlaylist(VolleyCallBack<Playlist> callback, String name, String description, boolean isPublic, ArrayList<Song> playlistSongs) {
+    public void generatePlaylist(VolleyCallBack<Playlist> callback, String name, String description, boolean isPublic, List<Song> playlistSongs) {
         createPlaylist(playlist -> {
             accumulateTracks(aVoid -> {
                 callback.onSuccess(playlist);

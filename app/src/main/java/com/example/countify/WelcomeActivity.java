@@ -38,7 +38,6 @@ public class WelcomeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_welcome);
-        getSupportActionBar().hide();
         Button loginButton = findViewById(R.id.spotify_login_btn);
         loginButton.setOnClickListener(v -> authenticateSpotify());
     }
@@ -81,7 +80,7 @@ public class WelcomeActivity extends AppCompatActivity {
         UserService userService = new UserService(this);
         userService.get(user -> {
             Shared.saveInPersistenceNow(this, Shared.USERID, user.id);
-            startActivity(new Intent(this, MainActivity.class));
+            startActivity(new Intent(this, PlaylistActivity.class));
         });
     }
     @Override

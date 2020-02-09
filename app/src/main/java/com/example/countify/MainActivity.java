@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setVisibility(View.VISIBLE);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         SnackbarCallback snackbarCallback = message -> Snackbar.make(toolbar, message, Snackbar.LENGTH_LONG).show();
-        PlaylistAdapter adapter = new PlaylistAdapter(this, allSongs, playlist, snackbarCallback);
+        PlaylistAdapter adapter = new PlaylistAdapter(this, allSongs, playlist, snackbarCallback, null);
         recyclerView.setAdapter(adapter);
 
         ItemTouchHelper.SimpleCallback swipeRemoveCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {

@@ -12,7 +12,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListUpdateCallback;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.squareup.picasso.Picasso;
@@ -23,19 +25,23 @@ import java.util.List;
 
 public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final String TAG = Shared.TAG + "PlaylistAdapter";
-    private List<Song> playlist;
-    private List<Song> allSongs;
     private LayoutInflater mInflater;
     private Context context;
     private SnackbarCallback snackbarCallback;
+    private List<Song> allSongs;
+    private List<Song> playlist;
+    private FragmentTransactionCallback fragmentTransactionCallback;
     private Editable timeBefore;
-
-    PlaylistAdapter(Context context, List<Song> allsongs, List<Song> playlist, SnackbarCallback snackbarCallback) {
+    private SongViewModel model;
+    PlaylistAdapter(Context context, List<Song> allSongs, List<Song> playlist, SnackbarCallback snackbarCallback,FragmentTransactionCallback fragmentTransactionCallback) {
         this.mInflater = LayoutInflater.from(context);
-        this.allSongs = allsongs;
-        this.playlist = playlist;
         this.context = context;
         this.snackbarCallback = snackbarCallback;
+        this.fragmentTransactionCallback = fragmentTransactionCallback;
+        model = new ViewModelProvider((PlaylistActivity) context,new SongViewModelFactory(context)).get(SongViewModel.class);
+        this.allSongs = allSongs;
+        this.playlist = playlist;
+
     }
 
     private final int GENERATE = 0;
@@ -90,22 +96,11 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 generateViewHolder.generateBtn.setOnClickListener(v -> {
                     Log.d(TAG, "Clicked generate button");
                     timeBefore = generateViewHolder.time.getText();
-                    SongService songService = new SongService(context);
                     String timeString = generateViewHolder.time.getText().toString();
                     if (timeString.matches("-?\\d+")) {
                         try {
                             int timeInMs = Math.multiplyExact(Integer.parseInt(timeString), 60 * 1000);
-                            songService.findClosestSongs(playlist -> {
-                                Log.d(TAG, "got callback");
-                                if (playlist == null) {
-                                    Log.d(TAG, "playlist null");
-                                    snackbarCallback.showSnackbar("You don't have enough songs for that time. Please enter a smaller number.");
-                                }
-                                else {
-                                    Log.d(TAG, "playlist not null");
-                                    updateData(new ArrayList<>(playlist));
-                                }
-                            }, timeInMs, allSongs);
+                            model.findClosestSongs(timeInMs);
                         } catch (NumberFormatException | ArithmeticException e) {
                             snackbarCallback.showSnackbar("Please enter a valid time in minutes.");
                         }
@@ -117,11 +112,8 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         break;
             case CONFIRM:
                 ConfirmViewHolder confirmViewHolder = (ConfirmViewHolder) holder;
-                PlaylistService playlistService = new PlaylistService(context);
                 confirmViewHolder.confirmBtn.setOnClickListener(v -> {
-                    playlistService.generatePlaylist(playlist -> {
-                        Log.d(TAG, playlist.getHref());
-                    }, "Countify test", "Description", false, new ArrayList<>(playlist));
+                    fragmentTransactionCallback.onSwitch();
                 });
                 break;
             case SONG:
@@ -198,16 +190,48 @@ public class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         }
     }
     public void updateData(List<Song> data) {
-//        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffCallback(data, playlist));
-        int size = playlist.size();
+        Log.d("Ben-testing", "new " + data.size() + " old " + playlist.size() );
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffCallback(data, playlist));
         playlist.clear();
-//        notifyDataSetChanged();
-        notifyItemRangeRemoved(1,size+1);
         playlist.addAll(data);
-//        notifyDataSetChanged();
-        notifyItemRangeInserted(1,data.size()+1);
+        ListUpdateCallback listUpdateCallback = new ListUpdateCallback() {
+            @Override
+            public void onInserted(int position, int count) {
+                Log.d("Ben-testing", "inserting" + playlist.get(position).getName()+ " at " + position + " for count " + count);
+                notifyItemRangeInserted(position + 1, count);
+            }
 
-//        diffResult.dispatchUpdatesTo(this);
+            @Override
+            public void onRemoved(int position, int count) {
+                Log.d("Ben-testing", "removing" + playlist.get(position).getName()+ " at " + position + " for count " + count);
+                notifyItemRangeRemoved(position + 1, count);
+
+            }
+
+            @Override
+            public void onMoved(int fromPosition, int toPosition) {
+                Log.d("Ben-testing", "removing at " + fromPosition + " for count " + toPosition);
+
+                notifyItemMoved(fromPosition + 1, toPosition + 1);
+
+            }
+
+            @Override
+            public void onChanged(int position, int count, @Nullable Object payload) {
+                Log.d("Ben-testing", "changing at " + position + " for count " + count);
+
+                notifyItemRangeChanged(position +1, count, payload);
+            }
+        };
+//        int size = playlist.size();
+//        playlist.clear();
+////        notifyDataSetChanged();
+//        notifyItemRangeRemoved(1,size+1);
+//        playlist.addAll(data);
+////        notifyDataSetChanged();
+//        notifyItemRangeInserted(1,data.size()+1);
+
+        diffResult.dispatchUpdatesTo(listUpdateCallback);
     }
 }
 class DiffCallback extends DiffUtil.Callback{
@@ -232,12 +256,17 @@ class DiffCallback extends DiffUtil.Callback{
 
     @Override
     public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+        boolean same =  ((oldPlaylist.get(oldItemPosition).getId()).equals(newPlaylist.get(newItemPosition).getId()));
+        Log.d("Ben-testing", "old " + oldPlaylist.get(oldItemPosition).getId() + " new " + newPlaylist.get(newItemPosition).getId() + " are " + same + " equal");
         return oldPlaylist.get(oldItemPosition).getId().equals(newPlaylist.get(newItemPosition).getId());
     }
 
     @Override
     public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
-        return oldPlaylist.get(oldItemPosition).getName().equals(newPlaylist.get(newItemPosition).getName());
+        boolean same = oldPlaylist.get(oldItemPosition).equals(newPlaylist.get(newItemPosition));
+        Log.d("Ben-testing", "old " + oldPlaylist.get(oldItemPosition).getId() + " new " + newPlaylist.get(newItemPosition).getId() + " are " + same + " equal");
+
+        return oldPlaylist.get(oldItemPosition).equals(newPlaylist.get(newItemPosition));
     }
 
     @Nullable

@@ -44,6 +44,7 @@ public class SongService extends Service<List<Song>> {
     }
     //We need to recurse until we get a request with less than 50 songs
     private void recurse(VolleyCallBack<List<Song>> callback, ArrayList<Song> totalSongs, int offset) {
+        Log.d("Ben-testing", "here");
         String token = decryptToken();
         getInner(songs -> {
             totalSongs.addAll(songs);
